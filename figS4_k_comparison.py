@@ -1,0 +1,195 @@
+"""
+Supplementary Figure S4. Comparison of k = 5 and k = 8 topic size distributions.
+DHJ-26-0922 (Digital Health) — figure generation script.
+
+Fonts: Latin text is set in a metric-compatible Arial substitute so that the
+figure matches Figure 1 and the manuscript body text; Chinese glyphs fall back
+to a Simplified-Chinese face. Place a CJK font named NotoSansSC-Regular.otf next to this script
+(or edit CJK_FONT below).
+"""
+
+import os
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib import font_manager as fm
+
+os.makedirs("./output", exist_ok=True)
+
+CJK_FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "NotoSansSC-Regular.otf")
+if os.path.exists(CJK_FONT):
+    fm.fontManager.addfont(CJK_FONT)
+plt.rcParams.update({
+    "font.family": ["Liberation Sans", "Arial", "Noto Sans CJK SC", "Noto Sans SC"],
+    "pdf.fonttype": 42,
+    "mathtext.fontset": "custom",
+    "mathtext.rm": "Liberation Sans",
+    "mathtext.it": "Liberation Sans:italic",
+    "mathtext.bf": "Liberation Sans:bold",
+    "axes.unicode_minus": False,
+})
+
+import numpy as np
+from matplotlib.gridspec import GridSpec
+
+# ══════════════════════════════════════════════════════════════
+# UNIFIED COLOR PALETTE — Anchored to Figure 4
+# ══════════════════════════════════════════════════════════════
+TOPIC_COLORS_K5 = {
+    'T1': '#1F77B4',   # Blue
+    'T2': '#C67A2E',   # Orange
+    'T3': '#2CA02C',   # Green
+    'T4': '#9467BD',   # Purple  (was pink, now matches Fig 2/4)
+    'T5': '#17BECF',   # Teal
+}
+
+# k=8 uses a muted palette to differentiate from k=5
+TOPIC_COLORS_K8 = {
+    'T1': '#D55E00',   # Vermillion
+    'T2': '#56B4E9',   # Sky blue
+    'T3': '#009E73',   # Bluish green
+    'T4': '#E69F00',   # Amber
+    'T5': '#0072B2',   # Dark blue
+    'T6': '#CC79A7',   # Muted pink
+    'T7*': '#882255',  # Wine (micro-topic)
+    'T8*': '#AA4499',  # Plum (micro-topic)
+}
+
+# ── Topic sizes (Table S11) ──
+k5_labels = ['T1', 'T2', 'T3', 'T4', 'T5']
+k5_sizes  = [263, 206, 434, 552, 461]
+k5_names  = ['Postoperative\nRecovery',
+             'Cancer\nProgression',
+             'Diagnostic\nEvaluation',
+             'Treatment\nDecision',
+             'Healthcare\nNavigation']
+
+k8_labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7*', 'T8*']
+k8_sizes  = [520, 310, 285, 240, 255, 223, 40, 43]
+
+# Verify totals
+assert sum(k5_sizes) == 1916, f"k5 sum = {sum(k5_sizes)}, expected 1916"
+assert sum(k8_sizes) == 1916, f"k8 sum = {sum(k8_sizes)}, expected 1916"
+
+# ── Figure setup ──
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 8.5), dpi=600,
+                                gridspec_kw={'height_ratios': [1, 1.4],
+                                             'hspace': 0.42})
+fig.patch.set_facecolor('white')
+
+fig.suptitle('Supplementary Figure S4. Comparison of $k$ = 5 and $k$ = 8\n'
+             'Topic Size Distributions ($N$ = 1,916)',
+             fontsize=11.5, fontweight='bold', y=0.98, va='top')
+
+# ═══════════════════════════════════════
+# Panel A: k = 5 (selected)
+# ═══════════════════════════════════════
+ax1.set_title('$k$ = 5 (selected)', fontsize=10.5, fontweight='bold',
+              loc='left', pad=8, color='#1F77B4')
+
+y_pos = np.arange(len(k5_labels))
+bar_h = 0.55
+colors_k5 = [TOPIC_COLORS_K5[t] for t in k5_labels]
+
+bars1 = ax1.barh(y_pos, k5_sizes, height=bar_h, color=colors_k5,
+                  edgecolor='white', linewidth=0.8, zorder=3)
+
+# Y-axis: topic label + name
+ytick_labels = [f'{lbl}: {nm}' for lbl, nm in zip(k5_labels, k5_names)]
+ax1.set_yticks(y_pos)
+ax1.set_yticklabels(ytick_labels, fontsize=8.5, fontweight='500', linespacing=1.1)
+ax1.invert_yaxis()
+
+# Value labels
+for i, v in enumerate(k5_sizes):
+    pct = v / 1916 * 100
+    ax1.text(v + 12, i, f'{v}  ({pct:.1f}%)', va='center', fontsize=8,
+             fontweight='bold', color='#333333')
+
+ax1.set_xlim(0, 700)
+ax1.set_xlabel('Number of Posts', fontsize=9, labelpad=6)
+ax1.spines['top'].set_visible(False)
+ax1.spines['right'].set_visible(False)
+ax1.spines['left'].set_linewidth(0.6)
+ax1.spines['bottom'].set_linewidth(0.6)
+ax1.tick_params(axis='x', labelsize=8)
+ax1.tick_params(axis='y', length=0)
+
+# Light grid
+ax1.xaxis.grid(True, alpha=0.15, linestyle='-', linewidth=0.5)
+ax1.set_axisbelow(True)
+
+# ═══════════════════════════════════════
+# Panel B: k = 8 (peak coherence)
+# ═══════════════════════════════════════
+ax2.set_title('$k$ = 8 (peak coherence)', fontsize=10.5, fontweight='bold',
+              loc='left', pad=8, color='#D55E00')
+
+y_pos8 = np.arange(len(k8_labels))
+colors_k8 = [TOPIC_COLORS_K8[t] for t in k8_labels]
+
+bars2 = ax2.barh(y_pos8, k8_sizes, height=bar_h, color=colors_k8,
+                  edgecolor='white', linewidth=0.8, zorder=3)
+
+# Hatch micro-topics
+for i, lbl in enumerate(k8_labels):
+    if '*' in lbl:
+        bars2[i].set_hatch('///')
+        bars2[i].set_edgecolor(TOPIC_COLORS_K8[lbl])
+        bars2[i].set_linewidth(0.5)
+
+ax2.set_yticks(y_pos8)
+ax2.set_yticklabels(k8_labels, fontsize=8.5, fontweight='bold')
+ax2.invert_yaxis()
+
+for i, v in enumerate(k8_sizes):
+    pct = v / 1916 * 100
+    ax2.text(v + 12, i, f'{v}  ({pct:.1f}%)', va='center', fontsize=8,
+             fontweight='bold', color='#333333')
+
+ax2.set_xlim(0, 700)
+ax2.set_xlabel('Number of Posts', fontsize=9, labelpad=6)
+ax2.spines['top'].set_visible(False)
+ax2.spines['right'].set_visible(False)
+ax2.spines['left'].set_linewidth(0.6)
+ax2.spines['bottom'].set_linewidth(0.6)
+ax2.tick_params(axis='x', labelsize=8)
+ax2.tick_params(axis='y', length=0)
+
+ax2.xaxis.grid(True, alpha=0.15, linestyle='-', linewidth=0.5)
+ax2.set_axisbelow(True)
+
+# Dashed line separating micro-topics
+micro_start = k8_labels.index('T7*') - 0.5
+ax2.axhline(y=micro_start, color='#D55E00', linestyle='--', linewidth=1.2, alpha=0.7, zorder=4)
+
+# Micro-topic annotation
+ax2.annotate('Micro-topics ($n$ < 50)',
+             xy=(80, micro_start + 0.7),
+             fontsize=8, color='#D55E00', fontweight='bold',
+             fontstyle='italic',
+             bbox=dict(boxstyle='round,pad=0.3', facecolor='#FFF3E8',
+                       edgecolor='#D55E00', alpha=0.9, linewidth=0.8))
+
+# ── Note (text matches the published caption) ──
+note = ('Note. $k$ = 5 selected based on coherence ($c_v$ = 0.4802), '
+        'interpretability, and topic distinctiveness.\n'
+        '$k$ = 8 achieved peak coherence ($c_v$ = 0.5237) but produced two micro-topics '
+        '($n$ < 50; lower two bars)\n'
+        'and semantic redundancy (two topics; Jaccard similarity = 0.40). '
+        '$k$ = 5 via sklearn LDA (batch, random_state = 42).\n'
+        'Topic label colors in $k$ = 5 panel match Figures 2\u20134. '
+        'See Methods.')
+
+fig.text(0.06, 0.005, note, fontsize=7, color='#555555', va='bottom',
+         ha='left', fontstyle='italic', linespacing=1.4)
+
+plt.savefig('./output/FigS4.png', dpi=600, bbox_inches='tight',
+            facecolor='white', edgecolor='none', pad_inches=0.25)
+plt.savefig('./output/FigS4.pdf', dpi=600, bbox_inches='tight',
+            facecolor='white', edgecolor='none', pad_inches=0.25)
+plt.close()
+print("Figure S4 saved (PNG + PDF).")
+print(f"  k=5 sizes: {k5_sizes} (sum={sum(k5_sizes)})")
+print(f"  k=8 largest: {max(k8_sizes)} ({max(k8_sizes)/1916*100:.1f}%)")

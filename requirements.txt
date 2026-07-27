@@ -1,0 +1,12 @@
+# Python 3.11.9
+# Core versions pinned to match the manuscript where reported.
+jieba==0.42.1
+gensim==4.3.2
+scikit-learn>=1.2
+scipy>=1.10
+pandas>=1.5
+numpy>=1.23
+matplotlib>=3.6
+seaborn>=0.12
+openpyxl>=3.1
+pyLDAvis>=3.4
