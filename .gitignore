@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.ipynb_checkpoints/
+
+# Corpus data (not distributed — see DATA.md)
+data/*.csv
+data/*.xlsx
+# The de-identified validation label table IS distributed and is tracked:
+!sentiment_validation_labels.csv
+
+# Outputs
+output/
+
+# Fonts (place NotoSansSC-Regular.otf next to the figure scripts locally)
+*.otf
+*.ttf
+*.ttc
