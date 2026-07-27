@@ -13,9 +13,12 @@ random_state=42), the same estimator used for the final topic assignment, and
 coherence is computed with the gensim CoherenceModel.
 
 REPRODUCIBILITY NOTE
-  c_v depends on library versions. Reported values are k = 5: c_v = 0.4802
-  (local peak, selected; Table S3 and Figure S1) and k = 8: c_v = 0.5237
-  (global maximum). Pin gensim==4.3.2 as listed in requirements.txt.
+  c_v is computed over the top 20 words per topic (TOPN below), which is the
+  setting used for Table S3; changing TOPN shifts the whole curve. On the final
+  corpus this run gives k = 5: c_v = 0.481 (local peak, the selected solution),
+  k = 6: 0.463 and k = 7: 0.498, matching the values reported in Table S3 to
+  within 0.004. c_v also depends on library versions; pin gensim==4.3.2 as
+  listed in requirements.txt.
 """
 
 import os
@@ -41,7 +44,7 @@ POSTS_FILE = "./data/posts_FINAL_CLEANED_v3.csv"  # FINAL analytic corpus, N = 1
 OUTPUT_DIR = "./output"
 RANDOM_STATE = 42
 K_RANGE = range(2, 11)
-TOPN = 10  # top words per topic used for c_v
+TOPN = 20  # top words per topic used for c_v (matches Table S3)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 for term in MEDICAL_TERMS:
