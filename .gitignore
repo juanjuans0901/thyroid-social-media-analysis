@@ -7,13 +7,22 @@ __pycache__/
 # Corpus data (not distributed — see DATA.md)
 data/*.csv
 data/*.xlsx
-# The de-identified validation label table IS distributed and is tracked:
-!sentiment_validation_labels.csv
 
-# Outputs
+# The de-identified tables ARE distributed and are tracked (see DATA.md):
+!sentiment_validation_labels.csv
+!post_level_results_deidentified.csv
+!coding_manual.csv
+
+# Outputs. Not tracked: posts_with_all_labels.csv, posts_with_topics_FINAL.csv and
+# comments_with_sentiment.csv contain the corpus text and must not be redistributed.
 output/
 
-# Fonts (place NotoSansSC-Regular.otf next to the figure scripts locally)
+# Fonts.
+# figS3_emotion.py and figS5_keywords.py render Chinese glyphs and need a
+# Simplified-Chinese font named NotoSansSC-Regular.otf placed next to them
+# (Noto Sans SC, SIL Open Font License — see the Fonts section of README.md).
+# It is not committed here; both scripts stop with an explanatory error if it is
+# missing rather than falling back to a face with no CJK coverage.
 *.otf
 *.ttf
 *.ttc
