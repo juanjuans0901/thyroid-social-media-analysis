@@ -20,6 +20,35 @@ from matplotlib import font_manager as fm
 
 os.makedirs("./output", exist_ok=True)
 
+def draw_note(fig, x0, y0, text, width_frac, fontsize, color="#1a1a1a",
+              linespacing=1.2, ha="left"):
+    """Word-wrap a NOTE to `width_frac` of the figure width, measured with the
+    renderer so mathtext spans are sized correctly, and draw it as a full-width
+    left-justified block at the given line spacing. y0 is the block top."""
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    max_px = width_frac * fig.get_size_inches()[0] * fig.dpi
+    def _w(s):
+        t = fig.text(0, 0, s, fontsize=fontsize)
+        wpx = t.get_window_extent(rend).width
+        t.remove()
+        return wpx
+    lines, cur = [], ""
+    for word in text.split():
+        trial = word if not cur else cur + " " + word
+        if _w(trial) <= max_px or not cur:
+            cur = trial
+        else:
+            lines.append(cur); cur = word
+    if cur:
+        lines.append(cur)
+    dy = fontsize * linespacing / (72 * fig.get_size_inches()[1])
+    for i, ln in enumerate(lines):
+        fig.text(x0, y0 - i * dy, ln, ha=ha, va="top", fontsize=fontsize,
+                 color=color, linespacing=linespacing)
+    return len(lines)
+
+
 CJK_FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "NotoSansSC-Regular.otf")
 if os.path.exists(CJK_FONT):
@@ -79,9 +108,14 @@ assert sum(k5_sizes) == 1916, f"k5 sum = {sum(k5_sizes)}, expected 1916"
 assert sum(k8_sizes) == 1916, f"k8 sum = {sum(k8_sizes)}, expected 1916"
 
 # ── Figure setup ──
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 8.5), dpi=600,
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 9.4), dpi=600,
                                 gridspec_kw={'height_ratios': [1, 1.4],
                                              'hspace': 0.42})
+# Fixed margins: reserve a bottom band for the wrapped note so it never
+# collides with the 'Number of Posts' axis label, and enough left room for the
+# k = 5 topic labels. The figure is saved on this fixed box (no bbox_inches),
+# so the note coordinates below are exact.
+fig.subplots_adjust(left=0.235, right=0.965, top=0.905, bottom=0.205)
 fig.patch.set_facecolor('white')
 
 fig.suptitle('Supplementary Figure S4. Comparison of $k$ = 5 and $k$ = 8\n'
@@ -172,31 +206,17 @@ ax2.axhline(y=micro_start, color='#D55E00', linestyle='--', linewidth=1.2, alpha
 
 # Micro-topic annotation
 ax2.annotate('Micro-topics ($n$ < 50)',
-             xy=(80, micro_start + 0.7),
-             fontsize=8, color='#D55E00', fontweight='bold',
-             fontstyle='italic',
+             xy=(250, micro_start + 1.0),
+             fontsize=8.5, color='#D55E00', fontweight='bold',
              bbox=dict(boxstyle='round,pad=0.3', facecolor='#FFF3E8',
                        edgecolor='#D55E00', alpha=0.9, linewidth=0.8))
 
-# ── Note (text matches the published caption) ──
-note = ('Note. Coherence is essentially flat between $k$ = 5 and $k$ = 7 '
-        '($c_v$ = 0.4995, 0.5069 and 0.5079; Supplemental Table S3), so coherence does not\n'
-        'discriminate among those solutions. $k$ = 5 was selected because $k$ = 6 and $k$ = 7 '
-        'subdivide topics already present at $k$ = 5 rather than identifying\n'
-        'additional content, and because $k$ = 5 yields no micro-topics. '
-        '$k$ = 8 has LOWER coherence than $k$ = 5 ($c_v$ = 0.4797) and fragments into two\n'
-        'micro-topics ($n$ = 42 and $n$ = 21; lower two bars). '
-        'Both solutions via sklearn LDA (batch, max_iter = 20, random_state = 42).\n'
-        'Topic label colors in the $k$ = 5 panel match Figures 2\u20134. '
-        'See Methods.')
+# ── Note — auto-wrapped to the figure width, line spacing 1.2 ─────────────────
+NOTE = ('Note. Coherence is essentially flat between $k$ = 5 and $k$ = 7 ($c_v$ = 0.4995, 0.5069 and 0.5079; Supplemental Table S3), so coherence does not discriminate among those solutions. $k$ = 5 was selected because $k$ = 6 and $k$ = 7 subdivide topics already present at $k$ = 5 rather than identifying additional content, and because $k$ = 5 yields no micro-topics. $k$ = 8 has lower coherence than $k$ = 5 ($c_v$ = 0.4797) and fragments into two micro-topics ($n$ = 42 and $n$ = 21; lower two bars). Both solutions via sklearn LDA (batch, max_iter = 20, random_state = 42). Topic label colors in the $k$ = 5 panel match Figures 2–4. See Methods.')
+draw_note(fig, 0.045, 0.140, NOTE, 0.92, 8.0, color="#555555")
 
-fig.text(0.06, 0.005, note, fontsize=7, color='#555555', va='bottom',
-         ha='left', fontstyle='italic', linespacing=1.4)
-
-plt.savefig('./output/FigS4.png', dpi=600, bbox_inches='tight',
-            facecolor='white', edgecolor='none', pad_inches=0.25)
-plt.savefig('./output/FigS4.pdf', dpi=600, bbox_inches='tight',
-            facecolor='white', edgecolor='none', pad_inches=0.25)
+plt.savefig('./output/FigS4.png', dpi=600, facecolor='white', edgecolor='none')
+plt.savefig('./output/FigS4.pdf', facecolor='white', edgecolor='none')
 plt.close()
 print("Figure S4 saved (PNG + PDF).")
 print(f"  k=5 sizes: {k5_sizes} (sum={sum(k5_sizes)})")

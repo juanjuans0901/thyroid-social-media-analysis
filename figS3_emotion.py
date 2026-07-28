@@ -56,6 +56,36 @@ plt.rcParams.update({
 })
 os.makedirs("./output", exist_ok=True)
 
+def draw_note(fig, x0, y0, text, width_frac, fontsize, color="#1a1a1a",
+              linespacing=1.2, ha="left"):
+    """Word-wrap a NOTE to `width_frac` of the figure width, measured with the
+    renderer so mathtext spans are sized correctly, and draw it as a full-width
+    left-justified block at the given line spacing. Lines are packed as full as
+    they fit, so there are no short/long alternating lines. y0 is the block top."""
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    max_px = width_frac * fig.get_size_inches()[0] * fig.dpi
+    def _w(s):
+        t = fig.text(0, 0, s, fontsize=fontsize)
+        wpx = t.get_window_extent(rend).width
+        t.remove()
+        return wpx
+    lines, cur = [], ""
+    for word in text.split():
+        trial = word if not cur else cur + " " + word
+        if _w(trial) <= max_px or not cur:
+            cur = trial
+        else:
+            lines.append(cur); cur = word
+    if cur:
+        lines.append(cur)
+    dy = fontsize * linespacing / (72 * fig.get_size_inches()[1])
+    for i, ln in enumerate(lines):
+        fig.text(x0, y0 - i * dy, ln, ha=ha, va="top", fontsize=fontsize,
+                 color=color, linespacing=linespacing)
+    return len(lines)
+
+
 topics=['T1: Postoperative Recovery','T2: Postoperative Medication and Surveillance',
         'T3: Living With Thyroid Cancer','T4: Treatment Decision and Debate',
         'T5: Healthcare Navigation']
@@ -108,11 +138,17 @@ cb.set_label('Mean weighted emotion score per post',fontsize=12,labelpad=9)
 cb.ax.tick_params(labelsize=11.5,length=3)
 
 fig.text(0.5,0.945,'Supplementary Figure S3. Emotion Category Intensity by Topic (Posts, $N$ = 1,916)',
-         ha='center',va='center',fontsize=15.5)
-note=('Note. Cells show the mean weighted emotion score per post within each topic. Weights are from the domain-specific sentiment lexicon (Table S4, 80 terms). Negative\n'
-      'emotions: Fear (惧), Sadness (哀), Anger (怒), Disgust (恶), Surprise (惊). Positive emotions: Joy (乐), Like (好). See Methods. Distributions are right-skewed; full descriptive\n'
-      'statistics including medians and IQRs are reported in Table S12.')
-fig.text(0.085,0.093,note,ha='left',va='center',fontsize=11,linespacing=1.75,color='#1a1a1a')
+         ha='center',va='center',fontsize=15.5,fontweight='bold')
+NOTE = ("Note. Cells show the mean weighted emotion score per post within each "
+        "topic. Weights are from the domain-specific sentiment lexicon (Table S4, "
+        "80 terms). Negative emotions: fear, sadness, anger, disgust and surprise; "
+        "positive emotions: joy and like (DUTIR categories, shown with their Chinese "
+        "terms in the column headings). See Methods. Distributions are right-skewed; "
+        "full descriptive statistics including medians and IQRs are reported in "
+        "Table S12.")
+
+
+draw_note(fig, 0.085, 0.150, NOTE, 0.82, 11, color="#1a1a1a")
 fig.savefig('./output/FigS3.pdf')
 fig.savefig('./output/FigS3.png', dpi=600)
 print('Figure S3 saved (PDF + PNG).')

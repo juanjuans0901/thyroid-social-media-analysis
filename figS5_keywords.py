@@ -56,6 +56,36 @@ plt.rcParams.update({
 })
 os.makedirs("./output", exist_ok=True)
 
+def draw_note(fig, x0, y0, text, width_frac, fontsize, color="#1a1a1a",
+              linespacing=1.2, ha="left"):
+    """Word-wrap a NOTE to `width_frac` of the figure width, measured with the
+    renderer so mathtext spans are sized correctly, and draw it as a full-width
+    left-justified block at the given line spacing. Lines are packed as full as
+    they fit, so there are no short/long alternating lines. y0 is the block top."""
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    max_px = width_frac * fig.get_size_inches()[0] * fig.dpi
+    def _w(s):
+        t = fig.text(0, 0, s, fontsize=fontsize)
+        wpx = t.get_window_extent(rend).width
+        t.remove()
+        return wpx
+    lines, cur = [], ""
+    for word in text.split():
+        trial = word if not cur else cur + " " + word
+        if _w(trial) <= max_px or not cur:
+            cur = trial
+        else:
+            lines.append(cur); cur = word
+    if cur:
+        lines.append(cur)
+    dy = fontsize * linespacing / (72 * fig.get_size_inches()[1])
+    for i, ln in enumerate(lines):
+        fig.text(x0, y0 - i * dy, ln, ha=ha, va="top", fontsize=fontsize,
+                 color=color, linespacing=linespacing)
+    return len(lines)
+
+
 from matplotlib.gridspec import GridSpec
 
 # Topic-word distributions from the fitted model (k = 5, batch variational
@@ -84,7 +114,7 @@ D={
  ('建议 (Advice)',0.0103),('体检 (Health check)',0.0078)]),
 }
 fig=plt.figure(figsize=(15.90,11.07))
-gs=GridSpec(2,6,figure=fig,left=0.130,right=0.980,top=0.885,bottom=0.115,hspace=0.42,wspace=2.9)
+gs=GridSpec(2,6,figure=fig,left=0.130,right=0.980,top=0.885,bottom=0.165,hspace=0.42,wspace=2.9)
 slots=[gs[0,0:2],gs[0,2:4],gs[0,4:6],gs[1,1:3],gs[1,3:5]]
 for slot,(title,(col,items)) in zip(slots,D.items()):
     ax=fig.add_subplot(slot)
@@ -101,10 +131,10 @@ for slot,(title,(col,items)) in zip(slots,D.items()):
     for yi,v in zip(y,vals):
         ax.text(v+max(vals)*0.025,yi,f'{v:.4f}',va='center',ha='left',fontsize=10.5,color=col)
 fig.text(0.5,0.945,'Supplementary Figure S5. Top 10 Keyword Weights per LDA Topic ($N$ = 1,916)',
-         ha='center',va='center',fontsize=16)
-note=('Note. Keywords are shown as Chinese term (English translation). Weights are from the LDA topic–word distribution ($k$ = 5, batch variational inference, random_state = 42).\n'
-      'Color scheme is consistent with Figures 2–4. See Methods.')
-fig.text(0.085,0.045,note,ha='left',va='center',fontsize=11.5,linespacing=1.75,color='#1a1a1a')
+         ha='center',va='center',fontsize=16,fontweight='bold')
+NOTE = ('Note. Keywords are shown as Chinese term (English translation). Weights are from the LDA topic–word distribution ($k$ = 5, batch variational inference, random_state = 42). Color scheme is consistent with Figures 2–4. See Methods.')
+
+draw_note(fig, 0.085, 0.090, NOTE, 0.86, 11.5, color="#1a1a1a")
 fig.savefig('./output/FigS5.pdf')
 fig.savefig('./output/FigS5.png', dpi=600)
 print('Figure S5 saved (PDF + PNG).')

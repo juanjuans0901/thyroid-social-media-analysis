@@ -22,6 +22,36 @@ import numpy as np
 
 os.makedirs("./output", exist_ok=True)
 
+def draw_note(fig, x0, y0, text, width_frac, fontsize, color="#1a1a1a",
+              linespacing=1.2, ha="left"):
+    """Word-wrap a NOTE to `width_frac` of the figure width, measured with the
+    renderer so mathtext spans are sized correctly, and draw it as a full-width
+    left-justified block at the given line spacing. Lines are packed as full as
+    they fit, so there are no short/long alternating lines. y0 is the block top."""
+    fig.canvas.draw()
+    rend = fig.canvas.get_renderer()
+    max_px = width_frac * fig.get_size_inches()[0] * fig.dpi
+    def _w(s):
+        t = fig.text(0, 0, s, fontsize=fontsize)
+        wpx = t.get_window_extent(rend).width
+        t.remove()
+        return wpx
+    lines, cur = [], ""
+    for word in text.split():
+        trial = word if not cur else cur + " " + word
+        if _w(trial) <= max_px or not cur:
+            cur = trial
+        else:
+            lines.append(cur); cur = word
+    if cur:
+        lines.append(cur)
+    dy = fontsize * linespacing / (72 * fig.get_size_inches()[1])
+    for i, ln in enumerate(lines):
+        fig.text(x0, y0 - i * dy, ln, ha=ha, va="top", fontsize=fontsize,
+                 color=color, linespacing=linespacing)
+    return len(lines)
+
+
 plt.rcParams.update({
     "font.family": ["Liberation Sans", "Arial", "DejaVu Sans"],
     "pdf.fonttype": 42,
@@ -105,21 +135,9 @@ fig.text(0.5, 0.945,
          "($\\it{N}$ = 1,916)",
          ha="center", va="center", fontsize=14, fontweight="bold")
 
-# ── Note ─────────────────────────────────────────────────────────────────────
-# Split by hand into two lines at a sentence boundary, so that no test
-# statistic, effect size or P value can be broken across a line end. The
-# submitted version of this figure wrapped "Cramer\'s V = 0.121" after the
-# decimal point. Statistical symbols are set in italics via mathtext.
-NOTE_LINES = [
-    "Note. Row percentages sum to 100% within each platform. Color scale "
-    "centered at 20%, the uniform distribution expected for $\\it{k}$ = 5 topics.",
-    "Overall $\\chi^{2}$(12) = 84.16, $\\it{P}$ < .001, Cramér\'s $\\it{V}$ = 0.121. "
-    "See Supplemental Table S8 for pairwise comparisons. Topic label colors "
-    "match Figure 4.",
-]
-for i, line in enumerate(NOTE_LINES):
-    fig.text(0.075, 0.078 - i * 0.040, line, ha="left", va="top",
-             fontsize=9.2, color="#1a1a1a")
+# ── Note — auto-wrapped to the figure width, line spacing 1.2 ──────────────────
+NOTE = ("Note. Row percentages sum to 100% within each platform. Color scale centered at 20%, the uniform distribution expected for $\\it{k}$ = 5 topics. Overall $\\chi^{2}$(12) = 84.16, $\\it{P}$ < .001, Cramér's $\\it{V}$ = 0.121. See Supplemental Table S8 for pairwise comparisons. Topic label colors match Figure 4.")
+draw_note(fig, 0.075, 0.150, NOTE, 0.850, 9.2, color="#1a1a1a")
 
 fig.savefig("./output/Fig3.pdf", facecolor="white")
 fig.savefig("./output/Fig3.png", dpi=600, facecolor="white")
