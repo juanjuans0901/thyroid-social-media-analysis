@@ -56,6 +56,8 @@ the corresponding CSV to `output/` on each run. If a figure value and the pipeli
 ever disagree, the pipeline output is authoritative.
 
 - `fig2_topic_distribution.py` — Figure 2 (topic distribution)
+- `fig3_platform_heatmap.py` — Figure 3 (cross-platform topic distribution heatmap;
+  values exported by `01_full_pipeline.py` to `output/table_s8_platform_topic.csv`)
 - `fig4_thematic_landscape.py` — Figure 4 (topics; the 25 categories in five content
   domains; sentiment profile; CSM mapping)
 - `figS3_emotion.py` — Supplementary Figure S3 (emotion category intensity)
