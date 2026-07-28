@@ -10,8 +10,11 @@ Uses asymmetric perturbation based on the known error pattern:
 - Secondary error: Negative → Neutral
 - Tertiary: other misclassifications
 
-Perturbation rates: 20%, 30%, 40% (bracketing the observed 41.6% error rate)
+Perturbation rates: 20%, 30%, 40% (bracketing the observed 41.6% error rate,
+i.e. 100% - 58.4% individual-level accuracy; Table S5, Panel C)
 """
+
+import os
 
 import pandas as pd
 import numpy as np
@@ -19,12 +22,28 @@ from scipy.stats import chi2_contingency
 import json
 
 np.random.seed(42)
+os.makedirs('./output', exist_ok=True)
 
 # ============================================================
 # 1. Load data
 # ============================================================
-df = pd.read_csv('./data/posts_with_topics_FINAL.csv', encoding='utf-8-sig')
-print(f"Loaded {len(df)} posts")
+# posts_with_topics_FINAL.csv is written to ./output/ by 01_full_pipeline.py.
+# It is also accepted from ./data/ if it was placed there by hand.
+CANDIDATES = ['./output/posts_with_topics_FINAL.csv',
+              './data/posts_with_topics_FINAL.csv']
+INPUT = next((f for f in CANDIDATES if os.path.exists(f)), None)
+if INPUT is None:
+    raise SystemExit(
+        "posts_with_topics_FINAL.csv not found. Run 01_full_pipeline.py first; "
+        "it writes the file to ./output/. Looked in: " + ", ".join(CANDIDATES))
+
+df = pd.read_csv(INPUT, encoding='utf-8-sig')
+print(f"Loaded {len(df)} posts from {INPUT}")
+missing = [c for c in ('sent_opt', 'topic_label', 'platform') if c not in df.columns]
+if missing:
+    raise SystemExit(
+        f"{INPUT} is missing required column(s): {missing}. The sentiment column "
+        "must be named 'sent_opt' (the optimised 80-term lexicon label).")
 print(f"Sentiment distribution: {df['sent_opt'].value_counts().to_dict()}")
 print(f"Topic distribution: {df['topic_label'].value_counts().sort_index().to_dict()}")
 print(f"Platform distribution: {df['platform'].value_counts().to_dict()}")

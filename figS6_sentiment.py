@@ -40,7 +40,7 @@ cmts ={'Xiaohongshu':(10.8,83.3,5.9),'Zhihu':(9.5,79.9,10.6),'Weibo':(3.9,81.1,1
 cn   ={'Xiaohongshu':4332,'Zhihu':10425,'Weibo':2161,'Douyin':9325}
 NEG,NEU,POS='#d95f02','#bdbdbd','#3a8fc7'
 
-tp=['T1\nPostop.\nRecovery','T2\nCancer\nProgression','T3\nDiagnostic\nEvaluation','T4\nTreatment\nDecision','T5\nHealthcare\nNavigation']
+tp=['T1\nPostoperative\nRecovery','T2\nMedication &\nSurveillance','T3\nLiving With\nThyroid Cancer','T4\nTreatment\nDecision','T5\nHealthcare\nNavigation']
 tcol=['#1f77b4','#c67a2e','#2ca02c','#9467bd','#17becf']
 pB=np.array([[18.5,17.3,32.3,11.2,22.8],[28.6,11.1,16.5,9.7,16.1],[28.6,30.2,27.6,18.7,21.1],[20.0,8.8,15.0,3.6,19.2]])
 pN=np.array([[119,75,186,161,171],[91,54,121,185,193],[28,43,87,150,71],[25,34,40,56,26]])

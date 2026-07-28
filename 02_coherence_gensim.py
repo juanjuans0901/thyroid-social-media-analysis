@@ -13,12 +13,21 @@ random_state=42), the same estimator used for the final topic assignment, and
 coherence is computed with the gensim CoherenceModel.
 
 REPRODUCIBILITY NOTE
-  c_v is computed over the top 20 words per topic (TOPN below), which is the
-  setting used for Table S3; changing TOPN shifts the whole curve. On the final
-  corpus this run gives k = 5: c_v = 0.481 (local peak, the selected solution),
-  k = 6: 0.463 and k = 7: 0.498, matching the values reported in Table S3 to
-  within 0.004. c_v also depends on library versions; pin gensim==4.3.2 as
-  listed in requirements.txt.
+  c_v depends on library versions; pin gensim==4.3.2 as listed in
+  requirements.txt. Reported values (Supplemental Table S3, Figure S1):
+
+      k     2       3       4       5       6       7       8       9      10
+    c_v  0.4818  0.4892  0.4458  0.4995  0.5069  0.5079  0.4797  0.4996  0.4703
+
+  Coherence is essentially flat between k = 5 and k = 7 (a range of 0.008), so
+  it does not discriminate among those three solutions; the maximum is at
+  k = 7, and k = 8 is LOWER than k = 5. k = 5 was selected because k = 6 and
+  k = 7 subdivide topics already present at k = 5 rather than identifying
+  additional content, and because k = 5 yields no micro-topics (n < 50),
+  whereas k = 8 fragments into two micro-topics of 42 and 21 posts.
+
+  Leave-one-platform-out at k = 5 (Figure S2): full model 0.4995; excluding
+  Douyin 0.5054, Weibo 0.5030, Zhihu 0.5476, Xiaohongshu 0.5218.
 """
 
 import os
@@ -44,7 +53,7 @@ POSTS_FILE = "./data/posts_FINAL_CLEANED_v3.csv"  # FINAL analytic corpus, N = 1
 OUTPUT_DIR = "./output"
 RANDOM_STATE = 42
 K_RANGE = range(2, 11)
-TOPN = 20  # top words per topic used for c_v (matches Table S3)
+TOPN = 10  # top words per topic used for c_v
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 for term in MEDICAL_TERMS:
@@ -111,8 +120,10 @@ def main():
         coh[k] = coherence_cv(dtm, vocab, texts, gdict, k)
         print(f"  k={k:>2}: c_v = {coh[k]:.4f}")
     kmax = max(coh, key=coh.get)
-    print(f"\nGlobal maximum: k={kmax} (c_v={coh[kmax]:.4f})")
-    print(f"Selected solution: k=5 (c_v={coh[5]:.4f})")
+    print(f"\nHighest coherence: k={kmax} (c_v={coh[kmax]:.4f})")
+    print(f"Selected solution: k=5 (c_v={coh[5]:.4f}) — selected on the "
+          f"coherence plateau plus interpretability and the absence of\n"
+          f"micro-topics, not on maximum coherence (see Supplemental Table S3)")
     pd.DataFrame(sorted(coh.items()), columns=["k", "c_v"]).to_csv(
         os.path.join(OUTPUT_DIR, "coherence_scan_k2_10.csv"), index=False
     )

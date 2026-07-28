@@ -36,9 +36,9 @@ import numpy as np
 # ── Data (from manuscript) ──
 topics = [
     'T1: Postoperative Recovery',
-    'T2: Cancer Progression',
-    'T3: Diagnostic Evaluation',
-    'T4: Treatment Decision',
+    'T2: Postoperative Medication\n      and Surveillance',
+    'T3: Living With Thyroid Cancer',
+    'T4: Treatment Decision and Debate',
     'T5: Healthcare Navigation',
 ]
 pcts = [13.7, 10.8, 22.7, 28.8, 24.1]

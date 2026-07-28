@@ -2,6 +2,10 @@
 Supplementary Figure S4. Comparison of k = 5 and k = 8 topic size distributions.
 DHJ-26-0922 (Digital Health) — figure generation script.
 
+k = 8 is shown because it was the previously reported coherence maximum. On the
+recomputed values (Supplemental Table S3) k = 8 has LOWER coherence than k = 5;
+this panel is retained to document the two micro-topics it produces.
+
 Fonts: Latin text is set in a metric-compatible Arial substitute so that the
 figure matches Figure 1 and the manuscript body text; Chinese glyphs fall back
 to a Simplified-Chinese face. Place a CJK font named NotoSansSC-Regular.otf next to this script
@@ -60,13 +64,15 @@ TOPIC_COLORS_K8 = {
 k5_labels = ['T1', 'T2', 'T3', 'T4', 'T5']
 k5_sizes  = [263, 206, 434, 552, 461]
 k5_names  = ['Postoperative\nRecovery',
-             'Cancer\nProgression',
-             'Diagnostic\nEvaluation',
-             'Treatment\nDecision',
+             'Postoperative Medication\nand Surveillance',
+             'Living With\nThyroid Cancer',
+             'Treatment Decision\nand Debate',
              'Healthcare\nNavigation']
 
 k8_labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7*', 'T8*']
-k8_sizes  = [520, 310, 285, 240, 255, 223, 40, 43]
+# k = 8 sizes recomputed from the analytic corpus with the same estimator
+# (sklearn LDA, batch, max_iter=20, random_state=42); see 01_full_pipeline.py.
+k8_sizes  = [501, 418, 336, 245, 184, 169, 42, 21]
 
 # Verify totals
 assert sum(k5_sizes) == 1916, f"k5 sum = {sum(k5_sizes)}, expected 1916"
@@ -121,10 +127,10 @@ ax1.xaxis.grid(True, alpha=0.15, linestyle='-', linewidth=0.5)
 ax1.set_axisbelow(True)
 
 # ═══════════════════════════════════════
-# Panel B: k = 8 (peak coherence)
+# Panel B: k = 8 (rejected)
 # ═══════════════════════════════════════
-ax2.set_title('$k$ = 8 (peak coherence)', fontsize=10.5, fontweight='bold',
-              loc='left', pad=8, color='#D55E00')
+ax2.set_title('$k$ = 8 (rejected: lower coherence than $k$ = 5; two micro-topics)',
+              fontsize=10.5, fontweight='bold', loc='left', pad=8, color='#D55E00')
 
 y_pos8 = np.arange(len(k8_labels))
 colors_k8 = [TOPIC_COLORS_K8[t] for t in k8_labels]
@@ -173,13 +179,15 @@ ax2.annotate('Micro-topics ($n$ < 50)',
                        edgecolor='#D55E00', alpha=0.9, linewidth=0.8))
 
 # ── Note (text matches the published caption) ──
-note = ('Note. $k$ = 5 selected based on coherence ($c_v$ = 0.4802), '
-        'interpretability, and topic distinctiveness.\n'
-        '$k$ = 8 achieved peak coherence ($c_v$ = 0.5237) but produced two micro-topics '
-        '($n$ < 50; lower two bars)\n'
-        'and semantic redundancy (two topics; Jaccard similarity = 0.40). '
-        '$k$ = 5 via sklearn LDA (batch, random_state = 42).\n'
-        'Topic label colors in $k$ = 5 panel match Figures 2\u20134. '
+note = ('Note. Coherence is essentially flat between $k$ = 5 and $k$ = 7 '
+        '($c_v$ = 0.4995, 0.5069 and 0.5079; Supplemental Table S3), so coherence does not\n'
+        'discriminate among those solutions. $k$ = 5 was selected because $k$ = 6 and $k$ = 7 '
+        'subdivide topics already present at $k$ = 5 rather than identifying\n'
+        'additional content, and because $k$ = 5 yields no micro-topics. '
+        '$k$ = 8 has LOWER coherence than $k$ = 5 ($c_v$ = 0.4797) and fragments into two\n'
+        'micro-topics ($n$ = 42 and $n$ = 21; lower two bars). '
+        'Both solutions via sklearn LDA (batch, max_iter = 20, random_state = 42).\n'
+        'Topic label colors in the $k$ = 5 panel match Figures 2\u20134. '
         'See Methods.')
 
 fig.text(0.06, 0.005, note, fontsize=7, color='#555555', va='bottom',

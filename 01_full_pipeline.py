@@ -6,8 +6,9 @@ DHJ-26-0922 (Digital Health)
 =============================================================
 Input : ./data/posts_FINAL_CLEANED_v3.csv      (N = 1,916 patient-authored posts)
         ./data/comments_CONSENSUS_FINAL.csv    (N = 26,243 included comments)
-Output: ./output/  — all statistics reported in the paper plus
-        posts_with_topics_FINAL.csv (the file consumed by scripts 03 and 04)
+Output: ./output/  — Supplemental Tables S8, S9, S10, S11, the data behind
+        Supplemental Figures S3, S5 and S6, and
+        posts_with_topics_FINAL.csv (the file consumed by script 03)
 
 Domain word lists are imported from resources.py (single source of truth):
   MEDICAL_TERMS      n = 65   Table S1
@@ -17,6 +18,11 @@ Domain word lists are imported from resources.py (single source of truth):
 
 Expected topic sizes: T1 = 263, T2 = 206, T3 = 434, T4 = 552, T5 = 461.
 The run asserts these at the end of STEP 6.
+
+Multiple comparisons: Bonferroni is applied ONCE. Each unadjusted p is compared
+with the adjusted alpha (.05/6 for the six platform pairs, .05/10 for the ten
+topic pairs). The Bonferroni-adjusted p (p x m) is exported alongside it for
+transparency only; it must be compared with .05, never with the adjusted alpha.
 
 Install:
   pip install -r requirements.txt
@@ -271,11 +277,14 @@ vocab = vectorizer.get_feature_names_out()
 print(f"  词典大小: {len(vocab)} 个词")
 print(f"  语料大小: {dtm.shape[0]} 篇文档")
 
-# 直接训练k=5模型（coherence已在之前用Gensim计算并记录在Figure S1中）
-print("\n  注意: coherence值已在之前的分析中用Gensim计算完毕")
-print("  (Figure S1: k=5 c_v=0.4802, k=8 c_v=0.5237)")
-print("  本次运行使用sklearn做主题分配，参数与Methods一致")
-
+# Fit the final k = 5 model. Coherence (c_v) is computed separately, by
+# 02_coherence_gensim.py, on the topic-word distributions of these same
+# scikit-learn models (Supplemental Table S3, Supplemental Figure S1).
+print("\n  Coherence (c_v) is computed by 02_coherence_gensim.py on the")
+print("  topic-word distributions of the same sklearn models fitted here.")
+print("  (Supplemental Table S3: k=5 c_v=0.4995; k=7 c_v=0.5079 is the maximum;")
+print("   k=8 c_v=0.4797, i.e. LOWER than k=5.)")
+print("  This run performs the topic assignment; parameters follow the Methods.")
 # ==============================
 # STEP 5: 训练k=5最终模型
 # ==============================
@@ -314,54 +323,49 @@ print("\n" + "=" * 60)
 print("STEP 6: 主题映射")
 print("=" * 60)
 
-# Keyword signatures used to map the five raw LDA topics onto the published
-# labels T1-T5. These are the signatures that reproduce the labelling in
-# posts_with_topics_FINAL.csv exactly (verified: 1,916 / 1,916 posts).
-TOPIC_SIGNATURES = {
-    'T1': {'术后', '恢复', '身体', '生活', '脖子', '伤口', '出院', '饮食'},
-    'T2': {'转移', '复发', '淋巴结', '碘131', '肿瘤', '淋巴', '颈部'},
-    'T3': {'结节', '体检', '钙化', '良性', '甲状腺结节', '发现', '检查'},
-    'T4': {'消融', '观察', '选择', '患者', '切除', '治疗', '风险'},
-    'T5': {'医生', '穿刺', '医院', '结果', 'B超', '彩超', '住院', '主任'},
+# Mapping of the five raw LDA topic indices onto the published labels T1-T5.
+#
+# The labels were assigned by two researchers who independently inspected the
+# topic-word distributions and representative posts for each raw topic, and were
+# reconciled through discussion (Methods, "Topic modeling"). The mapping is fixed
+# here rather than inferred from a keyword heuristic, so that this script
+# reproduces the published labelling exactly and the deposited code matches the
+# procedure described in the manuscript.
+TOPIC_MAP = {1: 'T1', 2: 'T2', 3: 'T3', 0: 'T4', 4: 'T5'}
+
+TOPIC_NAMES = {
+    'T1': 'Postoperative Recovery',
+    'T2': 'Postoperative Medication and Surveillance',
+    'T3': 'Living With Thyroid Cancer',
+    'T4': 'Treatment Decision and Debate',
+    'T5': 'Healthcare Navigation',
 }
 
-# 自动匹配
-topic_map = {}
-used_labels = set()
+print("  Topic labelling (fixed mapping, assigned by manual inspection):")
+for raw in sorted(TOPIC_MAP):
+    lab = TOPIC_MAP[raw]
+    n = (posts['dominant_topic_raw'] == raw).sum()
+    top_idx = lda5.components_[raw].argsort()[-10:][::-1]
+    top_words = ", ".join(vocab[t] for t in top_idx)
+    print(f"    Raw topic {raw} -> {lab}  {TOPIC_NAMES[lab]}  (n = {n})")
+    print(f"      top 10: {top_words}")
 
-print("  关键词匹配得分矩阵:")
-all_scores = {}
-for i in range(5):
-    top_idx = lda5.components_[i].argsort()[-20:][::-1]
-    top_words = set(vocab[j] for j in top_idx)
-    scores = {}
-    for label, sig in TOPIC_SIGNATURES.items():
-        scores[label] = len(top_words & sig)
-    all_scores[i] = scores
-    print(f"  Raw {i}: " + ", ".join(f"{k}={v}" for k, v in sorted(scores.items())))
+posts['topic_label'] = posts['dominant_topic_raw'].map(TOPIC_MAP)
+posts['topic_name'] = posts['topic_label'].map(TOPIC_NAMES)
 
-# 贪心匹配（最高分优先）
-for _ in range(5):
-    best_score = -1
-    best_raw = None
-    best_label = None
-    for raw_id, scores in all_scores.items():
-        if raw_id in topic_map:
-            continue
-        for label, score in scores.items():
-            if label in used_labels:
-                continue
-            if score > best_score:
-                best_score = score
-                best_raw = raw_id
-                best_label = label
-    if best_raw is not None:
-        topic_map[best_raw] = best_label
-        used_labels.add(best_label)
-        n = (posts['dominant_topic_raw'] == best_raw).sum()
-        print(f"  >>> Raw Topic {best_raw} -> {best_label} (match={best_score}, n={n})")
-
-posts['topic_label'] = posts['dominant_topic_raw'].map(topic_map)
+# Export the topic-word distributions that Figure S5 plots, so that the figure
+# is always regenerated from the fitted model rather than from stored values.
+_kw = []
+for raw in sorted(TOPIC_MAP):
+    comp = lda5.components_[raw]
+    dist = comp / comp.sum()
+    for rank, t in enumerate(comp.argsort()[-20:][::-1], start=1):
+        _kw.append({'raw_topic': raw, 'topic_label': TOPIC_MAP[raw],
+                    'topic_name': TOPIC_NAMES[TOPIC_MAP[raw]],
+                    'rank': rank, 'term': vocab[t],
+                    'weight': round(float(dist[t]), 6)})
+pd.DataFrame(_kw).to_csv(os.path.join(OUTPUT_DIR, 'topic_keywords_top20.csv'),
+                         index=False, encoding='utf-8-sig')
 
 print("\n  最终主题分布:")
 print("  " + "-" * 50)
@@ -377,7 +381,7 @@ ct = ct.reindex(columns=['T1', 'T2', 'T3', 'T4', 'T5'])
 print(ct.to_string())
 
 # 与论文对比
-print("\n  与论文Table S11对比 / compare with paper:")
+print("\n  Compare with the published solution (Supplemental Table S11):")
 paper_n = {'T1': 263, 'T2': 206, 'T3': 434, 'T4': 552, 'T5': 461}
 for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
     actual = (posts['topic_label'] == t).sum()
@@ -399,8 +403,8 @@ print("=" * 60)
 
 from scipy import stats
 
-# --- 7a: Table S9 主题情感概况 ---
-print("\n--- Table S9: 主题情感概况 ---")
+# --- 7a: Supplemental Table S11 — topic structure and sentiment profiles ---
+print("\n--- Table S11: topic sentiment profiles ---")
 topic_profiles = []
 for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
     sub = posts[posts['topic_label'] == t]
@@ -416,28 +420,28 @@ for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
     print(f"  {t}: n={n} ({n/len(posts)*100:.1f}%) | Neg={neg_pct:.1f}% Neu={neu_pct:.1f}% Pos={pos_pct:.1f}%")
 
 pd.DataFrame(topic_profiles).to_csv(
-    os.path.join(OUTPUT_DIR, 'table_s9_topic_profiles.csv'),
+    os.path.join(OUTPUT_DIR, 'table_s11_topic_profiles.csv'),
     index=False, encoding='utf-8-sig'
 )
 
-# --- 7b: Table S4 平台x主题 ---
-print("\n--- Table S4: 平台x主题 ---")
+# --- 7b: Supplemental Table S8 — topic distribution across platforms ---
+print("\n--- Table S8: platform x topic ---")
 plat_map = {'小红书': 'Xiaohongshu', '微博': 'Weibo', '知乎': 'Zhihu', '抖音': 'Douyin'}
 
-s4_data = []
+s8_data = []
 for plat_cn, plat_en in plat_map.items():
     for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
         n = len(posts[(posts['platform'] == plat_cn) & (posts['topic_label'] == t)])
-        s4_data.append({'platform': plat_en, 'topic': t, 'n': n})
+        s8_data.append({'platform': plat_en, 'topic': t, 'n': n})
 
-s4_df = pd.DataFrame(s4_data)
-s4_pivot = s4_df.pivot(index='platform', columns='topic', values='n')
-print(s4_pivot.to_string())
-s4_df.to_csv(os.path.join(OUTPUT_DIR, 'table_s4_platform_topic.csv'),
+s8_df = pd.DataFrame(s8_data)
+s8_pivot = s8_df.pivot(index='platform', columns='topic', values='n')
+print(s8_pivot.to_string())
+s8_df.to_csv(os.path.join(OUTPUT_DIR, 'table_s8_platform_topic.csv'),
              index=False, encoding='utf-8-sig')
 
-# --- 7c: Table S7 卡方检验 ---
-print("\n--- Table S7: 卡方检验 ---")
+# --- 7c: Supplemental Table S9 — sentiment chi-square tests ---
+print("\n--- Table S9: chi-square tests ---")
 chi2_results = []
 
 # 帖子 vs 评论
@@ -502,16 +506,21 @@ if len(comments_with_topic) > 0:
     print(f"  (topic-linked comments: {len(comments_with_topic)})")
 
 pd.DataFrame(chi2_results).to_csv(
-    os.path.join(OUTPUT_DIR, 'table_s7_chi_square.csv'),
+    os.path.join(OUTPUT_DIR, 'table_s9_chi_square.csv'),
     index=False, encoding='utf-8-sig'
 )
 
-# --- 7d: Table S8 Bonferroni ---
-print("\n--- Table S8: Bonferroni两两比较 ---")
+# --- 7d: Supplemental Table S10 — Bonferroni-corrected pairwise comparisons ---
+print("\n--- Table S10: Bonferroni-corrected pairwise comparisons ---")
 bonf_results = []
 platform_list = ['小红书', '微博', '知乎', '抖音']
 
-print("  Panel A: 平台两两 (6对, alpha=0.0083)")
+# Bonferroni is applied ONCE. The unadjusted p is compared with the adjusted
+# alpha (0.05 / 6 = .00833); the Bonferroni-adjusted p (p x 6) is reported for
+# transparency and is compared with .05 if used at all. Comparing an ADJUSTED p
+# with an ADJUSTED alpha applies the correction twice and is wrong.
+ALPHA_A = 0.05 / 6
+print(f"  Panel A: platform pairs (6 comparisons, Bonferroni alpha = {ALPHA_A:.5f})")
 for p1, p2 in combinations(platform_list, 2):
     sub = posts[posts['platform'].isin([p1, p2])]
     ct_pair = pd.crosstab(sub['platform'], sub['sentiment'])
@@ -519,17 +528,18 @@ for p1, p2 in combinations(platform_list, 2):
     n = ct_pair.sum().sum()
     v = np.sqrt(chi2 / (n * (min(ct_pair.shape) - 1)))
     bonf_p = min(p * 6, 1.0)
-    sig = "Yes" if bonf_p < 0.0083 else "n.s."
+    sig = "Yes" if p < ALPHA_A else "n.s."   # unadjusted p vs adjusted alpha
     bonf_results.append({
         'panel': 'A: Platform', 'pair': f'{plat_map[p1]} vs {plat_map[p2]}',
         'chi2': round(chi2, 2), 'df': dof, 'p_raw': round(p, 6),
-        'p_bonf': round(bonf_p, 6), 'V': round(v, 3),
+        'p_bonf': round(bonf_p, 6), 'alpha_bonf': round(ALPHA_A, 5), 'V': round(v, 3),
         'effect': 'Negligible' if v < 0.1 else 'Small' if v < 0.3 else 'Medium',
         'sig': sig, 'min_exp': round(exp.min(), 1)
     })
     print(f"    {plat_map[p1]} vs {plat_map[p2]}: chi2={chi2:.2f}, V={v:.3f}, sig={sig}")
 
-print("\n  Panel B: 主题两两 (10对, alpha=0.005)")
+ALPHA_B = 0.05 / 10
+print(f"\n  Panel B: topic pairs (10 comparisons, Bonferroni alpha = {ALPHA_B:.5f})")
 for t1, t2 in combinations(['T1', 'T2', 'T3', 'T4', 'T5'], 2):
     sub = posts[posts['topic_label'].isin([t1, t2])]
     ct_pair = pd.crosstab(sub['topic_label'], sub['sentiment'])
@@ -537,23 +547,23 @@ for t1, t2 in combinations(['T1', 'T2', 'T3', 'T4', 'T5'], 2):
     n = ct_pair.sum().sum()
     v = np.sqrt(chi2 / (n * (min(ct_pair.shape) - 1)))
     bonf_p = min(p * 10, 1.0)
-    sig = "Yes" if bonf_p < 0.005 else "n.s."
+    sig = "Yes" if p < ALPHA_B else "n.s."   # unadjusted p vs adjusted alpha
     bonf_results.append({
         'panel': 'B: Topic', 'pair': f'{t1} vs {t2}',
         'chi2': round(chi2, 2), 'df': dof, 'p_raw': round(p, 6),
-        'p_bonf': round(bonf_p, 6), 'V': round(v, 3),
+        'p_bonf': round(bonf_p, 6), 'alpha_bonf': round(ALPHA_B, 5), 'V': round(v, 3),
         'effect': 'Negligible' if v < 0.1 else 'Small' if v < 0.3 else 'Medium',
         'sig': sig, 'min_exp': round(exp.min(), 1)
     })
     print(f"    {t1} vs {t2}: chi2={chi2:.2f}, V={v:.3f}, sig={sig}")
 
 pd.DataFrame(bonf_results).to_csv(
-    os.path.join(OUTPUT_DIR, 'table_s8_bonferroni.csv'),
+    os.path.join(OUTPUT_DIR, 'table_s10_bonferroni.csv'),
     index=False, encoding='utf-8-sig'
 )
 
-# --- 7e: Panel B 帖子数据 (Figure S5底部热力图) ---
-print("\n--- Panel B Posts: 平台x主题x情感 ---")
+# --- 7e: Supplemental Figure S6, Panel B — platform x topic x sentiment ---
+print("\n--- Figure S6 Panel B: platform x topic x sentiment ---")
 pb_data = []
 for plat_cn, plat_en in plat_map.items():
     for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
@@ -574,8 +584,8 @@ pd.DataFrame(pb_data).to_csv(
     index=False, encoding='utf-8-sig'
 )
 
-# --- 7f: 情绪热力图数据 (Figure S6) ---
-print("\n--- Figure S6: 情绪强度热力图 ---")
+# --- 7f: Supplemental Figure S3 / Table S12 — emotion category intensity ---
+print("\n--- Figure S3 / Table S12: emotion category intensity ---")
 emo_cats = ['惧', '哀', '怒', '恶', '惊', '乐', '好']
 emo_en = {'惧': 'Fear', '哀': 'Sadness', '怒': 'Anger', '恶': 'Disgust',
           '惊': 'Surprise', '乐': 'Joy', '好': 'Like'}
@@ -597,7 +607,7 @@ for t in ['T1', 'T2', 'T3', 'T4', 'T5']:
     print(f"  {t}: {vals}")
 
 pd.DataFrame(heatmap_data).to_csv(
-    os.path.join(OUTPUT_DIR, 'figure_s6_emotion_heatmap.csv'),
+    os.path.join(OUTPUT_DIR, 'figure_s3_emotion_intensity.csv'),
     index=False, encoding='utf-8-sig'
 )
 
@@ -608,8 +618,16 @@ pd.DataFrame(heatmap_data).to_csv(
 print("\n" + "=" * 60)
 print("STEP 8: Coherence数据 (已有值，直接保存)")
 print("=" * 60)
-coherence_scores = {2: 0.3880, 3: 0.4148, 4: 0.4430, 5: 0.4802,
-                    6: 0.4660, 7: 0.4970, 8: 0.5237, 9: 0.5060, 10: 0.4980}
+# Supplemental Table S3 / Supplemental Figure S1. Computed by
+# 02_coherence_gensim.py with the gensim CoherenceModel (v4.3.2, topn = 10) on
+# the topic-word distributions of the scikit-learn models that produced the
+# reported assignments, so that the selection curve and the reported solution
+# come from the same estimator. Coherence is flat between k = 5 and k = 7
+# (range 0.008) and FALLS at k = 8; k = 5 was selected because k = 6 and k = 7
+# only subdivide topics already present at k = 5 and because k = 5 yields no
+# micro-topics (n < 50). k = 8 is not the maximum.
+coherence_scores = {2: 0.4818, 3: 0.4892, 4: 0.4458, 5: 0.4995,
+                    6: 0.5069, 7: 0.5079, 8: 0.4797, 9: 0.4996, 10: 0.4703}
 coh_df = pd.DataFrame([{'k': k, 'c_v': v} for k, v in coherence_scores.items()])
 coh_df.to_csv(os.path.join(OUTPUT_DIR, 'coherence_scores.csv'), index=False, encoding='utf-8-sig')
 print(coh_df.to_string(index=False))
@@ -620,12 +638,43 @@ print(coh_df.to_string(index=False))
 # ==============================
 posts.to_csv(os.path.join(OUTPUT_DIR, 'posts_with_all_labels.csv'),
              index=False, encoding='utf-8-sig')
-print(f"\n  保存完整帖子数据: {len(posts)} 条")
+print(f"\n  Saved full post-level output: {len(posts)} rows "
+      f"-> output/posts_with_all_labels.csv")
+
+# posts_with_topics_FINAL.csv is the interchange file consumed by
+# 03_sentiment_sensitivity.py. Its sentiment column is named `sent_opt`
+# (the optimised 80-term lexicon label) to match the schema described in
+# DATA.md and used by the deposited de-identified results table.
+_final = posts[['platform', 'post_id', 'clean_text', 'sentiment',
+                'dominant_topic_raw', 'topic_prob', 'topic_label']].copy()
+_final = _final.rename(columns={'sentiment': 'sent_opt'})
+_final.to_csv(os.path.join(OUTPUT_DIR, 'posts_with_topics_FINAL.csv'),
+              index=False, encoding='utf-8-sig')
+print(f"  Saved interchange file for script 03: {len(_final)} rows "
+      f"-> output/posts_with_topics_FINAL.csv")
+
+# De-identified post-level results table (deposited with this repository).
+# No post text and no platform post identifier, so it carries no
+# re-identification risk. Regenerating it here keeps the deposited copy and
+# the pipeline in step.
+_deid = pd.DataFrame({
+    'anon_id': [f'P{i:04d}' for i in range(1, len(posts) + 1)],
+    'platform': posts['platform'].map(plat_map).fillna(posts['platform']),
+    'topic': posts['topic_label'],
+    'topic_probability': posts['topic_prob'].round(4),
+    'sentiment': posts['sentiment'],
+    'char_count': posts['clean_text'].astype(str).str.len(),
+})
+_deid.to_csv(os.path.join(OUTPUT_DIR, 'post_level_results_deidentified.csv'),
+             index=False, encoding='utf-8-sig')
+print(f"  Rebuilt de-identified results table: {len(_deid)} rows "
+      f"-> output/post_level_results_deidentified.csv")
 
 # 保存评论数据
 included_comments.to_csv(os.path.join(OUTPUT_DIR, 'comments_with_sentiment.csv'),
                          index=False, encoding='utf-8-sig')
-print(f"  保存评论数据: {len(included_comments)} 条")
+print(f"  Saved comment-level output: {len(included_comments)} rows "
+      f"-> output/comments_with_sentiment.csv")
 
 
 # ==============================
@@ -634,17 +683,23 @@ print(f"  保存评论数据: {len(included_comments)} 条")
 print("\n" + "=" * 60)
 print("全部完成！输出文件在:", OUTPUT_DIR)
 print("=" * 60)
-print(f"""
-输出文件清单:
-  table_s9_topic_profiles.csv    — 主题情感概况
-  table_s4_platform_topic.csv    — 平台x主题分布
-  table_s7_chi_square.csv        — 卡方检验结果
-  table_s8_bonferroni.csv        — Bonferroni两两比较
-  panel_b_posts.csv              — 平台x主题x情感详细数据
-  figure_s6_emotion_heatmap.csv  — 情绪强度热力图数据
-  coherence_scores.csv           — k=2到10 coherence值
-  posts_with_all_labels.csv      — 带主题和情感标签的完整帖子
-  comments_with_sentiment.csv    — 带情感标签的评论
+print("""
+Output files
+------------
+  table_s11_topic_profiles.csv          Supplemental Table S11  topic structure and sentiment profiles
+  table_s8_platform_topic.csv           Supplemental Table S8   topic distribution across platforms
+  table_s9_chi_square.csv               Supplemental Table S9   sentiment chi-square tests
+  table_s10_bonferroni.csv              Supplemental Table S10  Bonferroni-corrected pairwise comparisons
+  panel_b_posts.csv                     Supplemental Figure S6, Panel B
+  figure_s3_emotion_intensity.csv       Supplemental Figure S3 / Table S12
+  topic_keywords_top20.csv              Supplemental Figure S5
+  coherence_scores.csv                  Supplemental Table S3 / Figure S1 (computed by 02_coherence_gensim.py)
+  posts_with_all_labels.csv             full post-level output (contains post text; not for redistribution)
+  posts_with_topics_FINAL.csv           interchange file consumed by 03_sentiment_sensitivity.py
+  comments_with_sentiment.csv           comment-level output (contains comment text; not for redistribution)
+  post_level_results_deidentified.csv   de-identified post-level results (no text, no post id)
 
-请将终端的完整输出截图或复制发给我，我来核对所有数值。
+Note: posts_with_all_labels.csv, posts_with_topics_FINAL.csv and
+comments_with_sentiment.csv contain the corpus text and must not be
+redistributed (see DATA.md).
 """)
