@@ -10,8 +10,9 @@ Uses asymmetric perturbation based on the known error pattern:
 - Secondary error: Negative → Neutral
 - Tertiary: other misclassifications
 
-Perturbation rates: 20%, 30%, 40% (bracketing the observed 41.6% error rate,
-i.e. 100% - 58.4% individual-level accuracy; Table S5, Panel C)
+Perturbation rates: 20%, 30%, 40%; 1,000 iterations are run at each rate.
+The largest rate approximates the observed 41.6% error rate (i.e. 100% - 58.4%
+individual-level accuracy; Table S5, Panel C).
 """
 
 import os

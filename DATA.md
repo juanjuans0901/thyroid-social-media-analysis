@@ -12,7 +12,7 @@ re-identification risk:
 | File | What it supports |
 |---|---|
 | `sentiment_validation_labels.csv` | Supplemental Table S5, Panels A and C |
-| `post_level_results_deidentified.csv` | every topic × platform × sentiment analysis in the paper |
+| `post_level_results_deidentified.csv` | every post-level topic × platform × sentiment analysis in the paper |
 | `coding_manual.csv` | Supplemental Table S7 (directed content analysis codebook) |
 
 ## Restricted inputs
@@ -74,7 +74,7 @@ De-identified post-level results for the complete analytic corpus. One row per p
 | `anon_id` | sequential anonymous identifier, `P0001`–`P1916`; not derivable from and not linkable to any platform identifier |
 | `platform` | `Xiaohongshu`, `Weibo`, `Zhihu` or `Douyin` |
 | `topic` | assigned LDA topic, `T1`–`T5` (dominant topic; see the topic label table in `README.md`) |
-| `topic_probability` | dominant-topic probability, 4 decimal places; the > 0.60 threshold defines the high-loading subset used for the directed content analysis |
+| `topic_probability` | dominant-topic probability, 4 decimal places; 1,257 posts exceed 0.60 in the final model |
 | `sentiment` | three-class polarity from the optimised 80-term lexicon (`sent_opt`): `Negative`, `Neutral` or `Positive` |
 | `char_count` | characters in the cleaned post, which determines the length-adaptive threshold |
 
@@ -120,8 +120,11 @@ Sixty-five of the sixty-nine open codes were specified before coding began. Four
 were introduced during coding, as directed content analysis allows, and are flagged in the
 `Open code status` column.
 
-Coding covered the 1,284 posts with a dominant-topic probability above 0.60, after
-excluding 16 institutional or marketing accounts (1,300 coded, 16 excluded). Two coders
+Coding covered 1,300 high-loading posts read during the analysis phase, of which 1,284
+were coded after excluding 16 institutional or marketing accounts. That set was assembled
+during the analysis phase, before the final topic solution was fitted, and does not
+correspond exactly to the 1,257 posts above a dominant-topic probability of 0.60 in
+`post_level_results_deidentified.csv`. Two coders
 coded independently; mean Cohen's κ across categories was 0.722 and disagreements were
 resolved by discussion. Percentages are of coded posts **within a domain**, so they do
 not sum to 100: a post can carry more than one category.

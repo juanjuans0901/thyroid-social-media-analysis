@@ -19,8 +19,9 @@ reproducer is most likely to check all come out exactly:
 
 - `resources.py` — single source of truth for the domain word lists: `MEDICAL_TERMS`
   (n = 65, Table S1), `STOPWORDS` (n = 172, Table S2), `SENTIMENT_LEXICON`
-  (n = 80, Table S4), `EMOTION_CATEGORIES` (7 DUTIR categories), and the sentiment
-  scoring parameters (`NEGATION_WINDOW_CHARS`, `LENGTH_THRESHOLDS`).
+  (n = 80, Table S4), `EMOTION_CATEGORIES` (the DUTIR emotion category carried by each
+  of those same 80 terms), and the sentiment scoring parameters
+  (`NEGATION_WINDOW_CHARS`, `LENGTH_THRESHOLDS`).
 
 **Pipeline**
 
@@ -101,8 +102,10 @@ the nine negation words appears in the **four characters** immediately preceding
 (roughly a two-word window in Chinese); and the net score is compared with a
 **length-adaptive threshold** — greater than 2 for texts over 500 characters, greater
 than 1 for 100–500 characters, greater than 0 for shorter texts. Emotion-category scores
-are separate: raw intensity-weighted term frequencies with no negation handling, as
-described in the Note on Emotion Category Scoring in the Methods.
+come from the same 80 terms and the same weights, accumulated in the same scoring pass,
+and differ only in that no negation handling is applied; each term carries one of the
+seven DUTIR categories. Coverage across the categories is uneven (17 terms carry fear,
+16 sadness, 16 joy and 16 like, against 7 anger, 5 surprise and 3 disgust).
 
 Segmentation-based scoring, or a fixed zero threshold, will not reproduce `sent_opt`.
 
@@ -170,9 +173,10 @@ re-identification risk:
 
 - `sentiment_validation_labels.csv` — lets anyone verify Supplemental Table S5 Panels A
   and C without access to the corpus.
-- `post_level_results_deidentified.csv` — lets anyone reproduce every topic × platform ×
-  sentiment cross-tabulation, χ² test, Cramér's V and Bonferroni-corrected pairwise
-  comparison reported in the paper without access to the corpus.
+- `post_level_results_deidentified.csv` — lets anyone reproduce every post-level
+  topic × platform × sentiment cross-tabulation, χ² test, Cramér's V and
+  Bonferroni-corrected pairwise comparison reported in the paper without access to the
+  corpus. The comment-level tests need the comment file, which is not distributed.
 - `coding_manual.csv` — the complete coding manual for the directed content analysis.
 
 The files `posts_with_all_labels.csv`, `posts_with_topics_FINAL.csv` and
